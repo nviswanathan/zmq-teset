@@ -18,12 +18,13 @@ class ZMQPubSub(object):
     def connect(self):
         self.context = zmq.Context()
         self.sub_socket = self.context.socket(zmq.SUB)
-        self.sub_socket.connect('tcp://54.66.239.36:5558')
+        self.sub_socket.connect('epgm://239.192.1.1:5555')
         self.sub_stream = ZMQStream(self.sub_socket)
         self.sub_stream.on_recv(self.callback)
         print('subscribe connected:')
         self.pub_socket = self.context.socket(zmq.PUB)
-        self.pub_socket.connect("tcp://54.66.239.36:5559")
+        self.pub_socket.setsockopt(zmq.LINGER, 0)
+        self.pub_socket.connect("epgm://239.192.1.1:5555") #pgm://interface:address:port
         print('publisher connected')
 
     def subscribe(self, channel_id):
@@ -37,8 +38,10 @@ class ZMQPubSub(object):
         self.pub_socket.send(('%s %s %d' % (channel_id, json.dumps(message), message_count)).encode('utf-8'))
 
     def close(self):
+        print('Close socket.', )
         self.sub_socket.close()
         self.pub_socket.close()
+        self.sub_stream.close()
 
 counter = 0
 message_count = 0
@@ -57,16 +60,18 @@ class MyWebSocket(WebSocketHandler):
         print('ws opened')
 
     def on_message(self, message):
-        print('Message Resived')
+        print('Socket Message Resived %s' % message)
+        self.write_message(message)
         self.pubsub.send_message(self.channel_type, json.loads(message))
     
     def on_close(self):
-        self.periodic.stop()
+        if getattr(self, 'periodic', None):
+            self.periodic.stop()
         self.pubsub.close()
         print('ws closed')
 
     def on_data(self, data):
-        print('socket data: %s' % datetime.now(), data)
+        print('queue socket data: %s' % datetime.now(), data)
         self.write_message(data[0].decode('utf-8'))
 
     def pub_data(self):
@@ -74,7 +79,7 @@ class MyWebSocket(WebSocketHandler):
         self.pubsub.send_message(self.channel_type, dict(id=self.id, message='Test Client'))
 
     def send_data(self):
-        self.periodic = PeriodicCallback(self.pub_data, 10000)
+        self.periodic = PeriodicCallback(self.pub_data, 10)
         self.periodic.start()
 
 def main():

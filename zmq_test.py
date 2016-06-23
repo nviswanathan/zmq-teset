@@ -9,7 +9,7 @@ ioloop.install()
 def subscribe(backend, port="5559"):  
     context = zmq.Context()  
     frontend = context.socket(zmq.SUB)
-    frontend.bind("tcp://*:5559")
+    frontend.bind("epgm://eth0;239.192.1.1:5555")
     frontend.setsockopt(zmq.SUBSCRIBE, "".encode('utf-8'))
     zmq.device(zmq.FORWARDER, frontend, backend)
 
@@ -17,7 +17,7 @@ def subscribe(backend, port="5559"):
 def server_pub(port="5558"):
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
-    socket.bind("tcp://*:%s" % port)
+    socket.bind("epgm://eth0;239.192.1.1:5555")
     print("Running server on port: ", port)
     subscribe(socket)
     return socket
