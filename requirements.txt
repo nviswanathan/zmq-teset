@@ -1,0 +1,4 @@
+
+pyzmq
+tornado==4.2.1
+websocket-client
